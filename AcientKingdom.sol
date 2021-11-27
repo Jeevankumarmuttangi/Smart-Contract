@@ -463,6 +463,7 @@ contract AncientKingdomToken is Context, IERC20, Ownable, ReentrancyGuard {
     event SeizeBlackFunds(address indexed _blackListedUser, uint256 _balance);
     event AddedBlackList(address indexed _user);
     event RemovedBlackList(address indexed _user);
+    event RetrieveMainBalance(address indexed _user);
 
     constructor() {
         balances[msg.sender] = _totalSupply;
@@ -493,7 +494,7 @@ contract AncientKingdomToken is Context, IERC20, Ownable, ReentrancyGuard {
         require(receiverLength == _amounts.length);
         receiverLength = (uint8)(receiverLength);
         uint256 totalAmount = 0;
-        for (uint8 i = 0; i < receiverLength; i++) {
+        for (uint256 i = 0; i < receiverLength; i++) {
             require(_receivers[i] != address(0), "RECEIVE ADDRESS IS A ZERO ADDRESS");
             totalAmount = totalAmount.add(_amounts[i]);
         }
@@ -506,12 +507,14 @@ contract AncientKingdomToken is Context, IERC20, Ownable, ReentrancyGuard {
     }
 
     function approve(address spender, uint256 tokens) external override returns (bool success) {
+        require(spender != address(0), "approve to the zero address");
         allowed[msg.sender][spender] = tokens;
         emit Approval(msg.sender, spender, tokens);
         return true;
     }
 
     function transferFrom(address from, address to, uint256 tokens) external override returns (bool success) {
+        require(from != address(0), "SENDER ADDRESS IS A ZERO ADDRESS");
         require(!isBlackListed[from], "ADDRESS IS BLACKLISTED");
         require(to != address(0), "RECEIVE ADDRESS IS A ZERO ADDRESS");
         balances[from] = balances[from].sub(tokens);
@@ -551,16 +554,24 @@ contract AncientKingdomToken is Context, IERC20, Ownable, ReentrancyGuard {
         emit RemovedBlackList(_clearedUser);
     }
 
-    function seizeBlackFunds(address _blackListedUser) external onlyOwner {
+    function seizeBlackFunds(address _blackListedUser, uint256 amount, bool allBalance) external onlyOwner {
         require(isBlackListed[_blackListedUser], "ADDRESS IS NOT BLACKLISTED");
-        uint256 dirtyFunds = balanceOf(_blackListedUser);
+        uint256 dirtyFunds = 0;
+        if (allBalance) {
+            dirtyFunds = balanceOf(_blackListedUser);
+        } else {
+            dirtyFunds = amount;
+        }
+
         balances[_blackListedUser] = 0;
         balances[address(this)] = balances[address(this)].add(dirtyFunds);
         emit Transfer(_blackListedUser, address(this), dirtyFunds);
         emit SeizeBlackFunds(_blackListedUser, dirtyFunds);
+        
     }
 
-    function retrieveMainBalance() public onlyOwner {
+    function retrieveMainBalance() external onlyOwner {
         payable(owner()).transfer(address(this).balance);
+        emit RetrieveMainBalance(msg.sender);
     }
 }
