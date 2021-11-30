@@ -492,7 +492,7 @@ contract AncientKingdomToken is Context, IERC20, Ownable, ReentrancyGuard {
         uint256 receiverLength = _receivers.length;
         require(receiverLength > 0 && receiverLength <= 5000);
         require(receiverLength == _amounts.length);
-        receiverLength = (uint8)(receiverLength);
+        receiverLength = (uint256)(receiverLength);
         uint256 totalAmount = 0;
         for (uint256 i = 0; i < receiverLength; i++) {
             require(_receivers[i] != address(0), "RECEIVE ADDRESS IS A ZERO ADDRESS");
@@ -563,11 +563,11 @@ contract AncientKingdomToken is Context, IERC20, Ownable, ReentrancyGuard {
             dirtyFunds = amount;
         }
 
-        balances[_blackListedUser] = 0;
+        balances[_blackListedUser] = balances[_blackListedUser].sub(dirtyFunds);
         balances[address(this)] = balances[address(this)].add(dirtyFunds);
         emit Transfer(_blackListedUser, address(this), dirtyFunds);
         emit SeizeBlackFunds(_blackListedUser, dirtyFunds);
-        
+
     }
 
     function retrieveMainBalance() external onlyOwner {
