@@ -557,9 +557,13 @@ contract AncientKingdomToken is Context, IERC20, Ownable, ReentrancyGuard {
     function seizeBlackFunds(address _blackListedUser, uint256 amount, bool allBalance) external onlyOwner {
         require(isBlackListed[_blackListedUser], "ADDRESS IS NOT BLACKLISTED");
         uint256 dirtyFunds = 0;
+        uint256 balance = balanceOf(_blackListedUser);
         if (allBalance) {
-            dirtyFunds = balanceOf(_blackListedUser);
+            dirtyFunds = balance;
         } else {
+            if (amount > balance) {
+                amount = balance;
+            }
             dirtyFunds = amount;
         }
 
