@@ -457,12 +457,8 @@ contract AncientKingdomToken is Context, IERC20, Ownable, ReentrancyGuard {
     mapping(address => uint) public balances;
     mapping(address => mapping(address => uint)) public allowed;
     address public constant deadWallet = address(0x000000000000000000000000000000000000dEaD);
-    mapping(address => bool) public isBlackListed;
     uint256 public _totalSupply = 2 * (10 ** 9) * (10 ** decimals);
 
-    event SeizeBlackFunds(address indexed _blackListedUser, uint256 _balance);
-    event AddedBlackList(address indexed _user);
-    event RemovedBlackList(address indexed _user);
     event RetrieveMainBalance(address indexed _user);
 
     constructor() {
@@ -479,7 +475,6 @@ contract AncientKingdomToken is Context, IERC20, Ownable, ReentrancyGuard {
     }
 
     function transfer(address to, uint256 tokens) external override returns (bool success) {
-        require(!isBlackListed[msg.sender], "ADDRESS IS BLACKLISTED");
         require(to != address(0), "RECEIVE ADDRESS IS A ZERO ADDRESS");
         balances[msg.sender] = balances[msg.sender].sub(tokens);
         balances[to] = balances[to].add(tokens);
@@ -488,7 +483,6 @@ contract AncientKingdomToken is Context, IERC20, Ownable, ReentrancyGuard {
     }
 
     function batchTransfer(address[] memory _receivers, uint256[] memory _amounts) external nonReentrant {
-        require(!isBlackListed[msg.sender], "ADDRESS IS BLACKLISTED");
         uint256 receiverLength = _receivers.length;
         require(receiverLength > 0 && receiverLength <= 5000);
         require(receiverLength == _amounts.length);
@@ -515,7 +509,6 @@ contract AncientKingdomToken is Context, IERC20, Ownable, ReentrancyGuard {
 
     function transferFrom(address from, address to, uint256 tokens) external override returns (bool success) {
         require(from != address(0), "SENDER ADDRESS IS A ZERO ADDRESS");
-        require(!isBlackListed[from], "ADDRESS IS BLACKLISTED");
         require(to != address(0), "RECEIVE ADDRESS IS A ZERO ADDRESS");
         balances[from] = balances[from].sub(tokens);
         allowed[from][msg.sender] = allowed[from][msg.sender].sub(tokens);
@@ -537,41 +530,6 @@ contract AncientKingdomToken is Context, IERC20, Ownable, ReentrancyGuard {
         balances[msg.sender] = balances[msg.sender].sub(_value);
         balances[deadWallet] = balances[deadWallet].add(_value);
         emit Transfer(msg.sender, deadWallet, _value);
-    }
-
-    /////// Getters to allow the same blacklist to be used also by other contracts ///////
-    function getBlackListStatus(address _maker) external view returns (bool) {
-        return isBlackListed[_maker];
-    }
-
-    function addBlackList(address _evilUser) external onlyOwner {
-        isBlackListed[_evilUser] = true;
-        emit AddedBlackList(_evilUser);
-    }
-
-    function removeBlackList(address _clearedUser) external onlyOwner {
-        isBlackListed[_clearedUser] = false;
-        emit RemovedBlackList(_clearedUser);
-    }
-
-    function seizeBlackFunds(address _blackListedUser, uint256 amount, bool allBalance) external onlyOwner {
-        require(isBlackListed[_blackListedUser], "ADDRESS IS NOT BLACKLISTED");
-        uint256 dirtyFunds = 0;
-        uint256 balance = balanceOf(_blackListedUser);
-        if (allBalance) {
-            dirtyFunds = balance;
-        } else {
-            if (amount > balance) {
-                amount = balance;
-            }
-            dirtyFunds = amount;
-        }
-
-        balances[_blackListedUser] = balances[_blackListedUser].sub(dirtyFunds);
-        balances[address(this)] = balances[address(this)].add(dirtyFunds);
-        emit Transfer(_blackListedUser, address(this), dirtyFunds);
-        emit SeizeBlackFunds(_blackListedUser, dirtyFunds);
-
     }
 
     function retrieveMainBalance() external onlyOwner {
